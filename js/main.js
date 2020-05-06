@@ -138,10 +138,9 @@ const createCardGood = () => {
 const openGoods = (event) => {
   const target = event.target;
   const restaurant = target.closest('.card-restaurant');
-  const auth = localStorage.getItem('authUser');
 
   // check auth user
-  if (auth) {
+  if (login) {
     if (restaurant) {
       containerPromo.classList.add('hide');
       restaurants.classList.add('hide');
