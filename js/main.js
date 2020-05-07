@@ -18,6 +18,17 @@ const restaurants = document.querySelector('.restaurants');
 const menu = document.querySelector('.menu');
 const logo = document.querySelector('.logo');
 const cardsMenu = document.querySelector('.cards-menu');
+const sectionHeadingMenu = document.querySelector('.section-heading-menu');
+
+const getData = async (url) => {
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`Ошибка по адресу ${url},
+    статус ошибки ${response.status}!`)
+  }
+  return await response.json();
+}
 
 // open modal trash
 const toggleModal = () => {
@@ -83,21 +94,29 @@ const checkAuth = () => {
   }
 };
 
-const createCardRestaurant = () => {
+const createCardRestaurant = ({ image, kitchen, name, price, products, stars,
+                                time_of_delivery: timeOfDelivery,}) => {
   const card = `
-    <a class="card card-restaurant">
-      <img src="img/tanuki/preview.jpg" alt="image" class="card-image"/>
+    <a
+    class="card card-restaurant"
+    data-products="${products}"
+    data-kitchen="${kitchen}"
+    data-stars="${stars}"
+    data-price="${price}"
+    data-name="${name}"
+    >
+      <img src="${image}" alt="image" class="card-image"/>
       <div class="card-text">
         <div class="card-heading">
-          <h3 class="card-title">Тануки</h3>
-          <span class="card-tag tag">60 мин</span>
+          <h3 class="card-title">${name}</h3>
+          <span class="card-tag tag">${timeOfDelivery}</span>
         </div>
         <div class="card-info">
           <div class="rating">
-            4.5
+            ${stars}
           </div>
-          <div class="price">От 1 200 ₽</div>
-          <div class="category">Суши, роллы</div>
+          <div class="price">От ${price} ₽</div>
+          <div class="category">${kitchen}</div>
         </div>
       </div>
     </a>
@@ -106,19 +125,19 @@ const createCardRestaurant = () => {
   cardsRestaurants.insertAdjacentHTML('beforeend', card);
 };
 
-const createCardGood = () => {
+const createCardGood = ({ description, id, name, image, price }) => {
   const card = document.createElement('div');
   card.className = 'card';
 
   card.insertAdjacentHTML('beforeend', `
-    <img src="img/pizza-plus/pizza-vesuvius.jpg" alt="image" class="card-image"/>
+    <img src="${image}" alt="image" class="card-image"/>
     <div class="card-text">
       <div class="card-heading">
-        <h3 class="card-title card-title-reg">Пицца Везувий</h3>
+        <h3 class="card-title card-title-reg">${name}</h3>
       </div>
       <div class="card-info">
-        <div class="ingredients">Соус томатный, сыр «Моцарелла», ветчина, пепперони, перец
-        «Халапенье», соус «Тобаско», томаты.
+        <div class="ingredients">
+            ${description}
         </div>
       </div>
       <div class="card-buttons">
@@ -126,13 +145,31 @@ const createCardGood = () => {
           <span class="button-card-text">В корзину</span>
           <span class="button-cart-svg"></span>
         </button>
-        <strong class="card-price-bold">545 ₽</strong>
+        <strong class="card-price-bold">${price} ₽</strong>
       </div>
     </div>
   `);
 
   cardsMenu.insertAdjacentElement('beforeend',card);
 
+}
+
+const createMenu = (name, stars, price, kitchen) => {
+  const menuElement = document.createElement('div');
+  menuElement.classList = 'section-heading';
+
+  menuElement.insertAdjacentHTML('beforeend', `
+    <h2 class="section-title restaurant-title">${name}</h2>
+    <div class="card-info">
+      <div class="rating">
+      ${stars}
+      </div>
+      <div class="price">От ${price} ₽</div>
+      <div class="category">${kitchen}</div>
+    </div>
+  `);
+
+  sectionHeadingMenu.insertAdjacentElement('beforeend', menuElement);
 }
 
 const openGoods = (event) => {
@@ -142,15 +179,21 @@ const openGoods = (event) => {
   // check auth user
   if (login) {
     if (restaurant) {
+      cardsMenu.textContent = '';
+      sectionHeadingMenu.textContent = '';
+
       containerPromo.classList.add('hide');
       restaurants.classList.add('hide');
       menu.classList.remove('hide');
 
-      cardsMenu.textContent = '';
+      const products = restaurant.dataset.products;
+      const kitchen = restaurant.dataset.kitchen;
+      const name = restaurant.dataset.name;
+      const price = restaurant.dataset.price;
+      const stars = restaurant.dataset.stars;
 
-      createCardGood();
-      createCardGood();
-      createCardGood();
+      createMenu(name, stars, price, kitchen);
+      getData(`./db/${products}`).then(createCardsGoods)
     }
   } else {
     toggleModalAuth();
@@ -164,12 +207,26 @@ const stepBackToRestaurants = () => {
   menu.classList.add('hide');
 }
 
-// events trash
-cartButton.addEventListener("click", toggleModal);
-close.addEventListener("click", toggleModal);
-// step forward and backward at the click of the restaurant
-cardsRestaurants.addEventListener('click', openGoods);
-logo.addEventListener('click', stepBackToRestaurants);
+const createCardsGoods = (data) => {
+  data.forEach(createCardGood)
+}
 
-checkAuth();
-createCardRestaurant();
+const createCardsRestaurant = (data) => {
+  data.forEach(createCardRestaurant)
+}
+
+
+const init = () => {
+  getData('./db/partners.json').then(createCardsRestaurant)
+
+  // events trash
+  cartButton.addEventListener("click", toggleModal);
+  close.addEventListener("click", toggleModal);
+  // step forward and backward at the click of the restaurant
+  cardsRestaurants.addEventListener('click', openGoods);
+  logo.addEventListener('click', stepBackToRestaurants);
+
+  checkAuth();
+}
+
+init();
