@@ -227,6 +227,11 @@ const init = () => {
   logo.addEventListener('click', stepBackToRestaurants);
 
   checkAuth();
+  
+  new Swiper('.swiper-container', {
+    loop: true,
+    autoplay: true
+  })
 }
 
 init();
