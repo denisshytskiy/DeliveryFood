@@ -7,7 +7,6 @@ const buttonAuth = document.querySelector('.button-auth');
 const modalAuth = document.querySelector('.modal-auth');
 const closeAuth = document.querySelector('.close-auth');
 const logInForm = document.querySelector('#logInForm');
-let login = localStorage.getItem('authUser');
 const loginInInput = document.querySelector('#login');
 const userName = document.querySelector('.user-name');
 const buttonOut = document.querySelector('.button-out');
@@ -19,6 +18,11 @@ const menu = document.querySelector('.menu');
 const logo = document.querySelector('.logo');
 const cardsMenu = document.querySelector('.cards-menu');
 const sectionHeadingMenu = document.querySelector('.section-heading-menu');
+const modalBody = document.querySelector('.modal-body');
+const modalPrice = document.querySelector('.modal-pricetag');
+const buttonClearCard = document.querySelector('.clear-cart');
+let login = localStorage.getItem('authUser');
+
 
 const getData = async (url) => {
   const response = await fetch(url);
@@ -41,11 +45,6 @@ const toggleModalAuth = () => {
 }
 
 const authorized = () => {
-  userName.textContent = login;
-  buttonAuth.style.display = 'none';
-  userName.style.display = 'inline';
-  buttonOut.style.display = 'block';
-
   const logOut = () => {
     login = null;
     localStorage.removeItem('authUser');
@@ -54,11 +53,17 @@ const authorized = () => {
     userName.style.display = '';
     buttonOut.style.display = '';
     userWarning.style.display = '';
+    cartButton.style.display = '';
 
     buttonOut.removeEventListener('click', logOut);
     checkAuth();
   }
 
+  userName.textContent = login;
+  buttonAuth.style.display = 'none';
+  userName.style.display = 'inline';
+  buttonOut.style.display = 'block';
+  cartButton.style.display = 'flex';
   buttonOut.addEventListener('click', logOut);
 };
 
@@ -141,11 +146,11 @@ const createCardGood = ({ description, id, name, image, price }) => {
         </div>
       </div>
       <div class="card-buttons">
-        <button class="button button-primary button-add-cart">
+        <button class="button button-primary button-add-cart" id="${id}">
           <span class="button-card-text">В корзину</span>
           <span class="button-cart-svg"></span>
         </button>
-        <strong class="card-price-bold">${price} ₽</strong>
+        <strong class="card-price card-price-bold">${price} ₽</strong>
       </div>
     </div>
   `);
@@ -215,19 +220,110 @@ const createCardsRestaurant = (data) => {
   data.forEach(createCardRestaurant)
 }
 
+const addToCard = (event) => {
+  const target = event.target;
+  const buttonAddToCard = target.closest('.button-add-cart');
+
+  if (buttonAddToCard) {
+    const card = target.closest('.card');
+    const title = card.querySelector('.card-title-reg').textContent;
+    const cost = card.querySelector('.card-price').textContent;
+    const id = buttonAddToCard.id;
+    const carts = cartLists(localStorage.getItem('cartList'));
+    const food = carts.find(item => item.id === id)
+
+    if (food) {
+      food.count += 1;
+    } else {
+      carts.push({
+        id,
+        title,
+        cost,
+        count: 1
+      })
+    }
+
+  localStorage.setItem('cartList', JSON.stringify(carts));
+  }
+}
+
+const renderCard = () => {
+  modalBody.textContent = '';
+  const carts = cartLists(localStorage.getItem('cartList'));
+
+  carts.forEach(({id, title, cost, count}) => {
+    const itemCart = `
+      <div class="food-row">
+        <span class="food-name">${title}</span>
+        <strong class="food-price">${cost}</strong>
+        <div class="food-counter">
+          <button class="counter-button counter-minus" data-id="${id}">-</button>
+          <span class="counter">${count}</span>
+          <button class="counter-button counter-plus" data-id="${id}">+</button>
+        </div>
+      </div>
+    `;
+
+    modalBody.insertAdjacentHTML('beforeend', itemCart);
+  })
+
+  const totalPrice = carts.reduce((result, item) => result + (parseFloat(item.cost) * item.count), 0);
+  modalPrice.textContent = `${totalPrice} ₽`;
+
+};
+
+const changeCount = (event) => {
+  const target = event.target;
+
+  if (target.classList.contains('counter-button')) {
+    const carts = cartLists(localStorage.getItem('cartList'));
+    const id = target.dataset.id;
+    const food = carts.find(index => index.id === id);
+
+    if (target.classList.contains('counter-minus')) {
+      food.count--;
+
+      if (!food.count) {
+        carts.splice(carts.indexOf(food), 1)
+      }
+    }
+
+    if (target.classList.contains('counter-plus')) food.count++;
+
+    localStorage.setItem('cartList', JSON.stringify(carts));
+
+    renderCard();
+  }
+}
+
+const clearCart = () => {
+  localStorage.setItem('cartList', '');
+  renderCard();
+}
+
+const cartLists = (cartList) => {
+  return cartList && cartList.length ? JSON.parse(cartList) : [];
+}
 
 const init = () => {
   getData('./db/partners.json').then(createCardsRestaurant)
 
   // events trash
-  cartButton.addEventListener("click", toggleModal);
+  cartButton.addEventListener("click", () => {
+    renderCard();
+    toggleModal();
+  });
+
+  buttonClearCard.addEventListener('click', clearCart)
+  modalBody.addEventListener('click', changeCount)
+  cardsMenu.addEventListener('click', addToCard);
   close.addEventListener("click", toggleModal);
   // step forward and backward at the click of the restaurant
   cardsRestaurants.addEventListener('click', openGoods);
   logo.addEventListener('click', stepBackToRestaurants);
 
   checkAuth();
-  
+
   new Swiper('.swiper-container', {
     loop: true,
     autoplay: true
